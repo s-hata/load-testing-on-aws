@@ -1,0 +1,32 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "SourceCode Repository Resources of Load Testing"
+Parameters:
+  RootStackName:
+    Type: "String"
+Resources:
+  SourceCodeRepository:
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: "Retain"
+    Properties:
+      AccessControl: "BucketOwnerFullControl"
+      VersioningConfiguration:
+        Status: "Enabled"
+      WebsiteConfiguration:
+        IndexDocument: "index.html"
+        ErrorDocument: "index.html"
+  BucketPolicyForSourceCodeRepository:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      PolicyDocument:
+        Id: "BucketPolicyIDForSourceCodeRepository"
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "PublicReadForGetBucketObjects"
+            Effect: "Allow"
+            Principal: "*"
+            Action: "s3:GetObject"
+            Resource: !Sub "arn:aws:s3:::${SourceCodeRepository}/*"
+      Bucket: !Ref SourceCodeRepository
+Outputs:
+  Name:
+    Value: !Ref SourceCodeRepository

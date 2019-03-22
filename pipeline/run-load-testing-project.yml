@@ -1,0 +1,155 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Run Load Test Project resources of load test"
+Parameters:
+  ParentStackName:
+    Type: "String"
+  SourceCodeRepositoryName:
+    Type: "String"
+  ClusterName:
+    Type: "String"
+  JMeterServerTaskName:
+    Type: "String"
+  JMeterClientTaskName:
+    Type: "String"
+  ServerContainerImageRepository:
+    Type: "String"
+  ClientContainerImageRepository:
+    Type: "String"
+  RuntimeStackName:
+    Type: "String"
+Mappings:
+  Constraints:
+    CodeBuild:
+      COMPUTETYPE: "BUILD_GENERAL1_SMALL"
+      IMAGE: "docker:dind"
+      SPEC: "spec-files/run-load-test-spec.yml"
+Resources:
+  RunLoadTestProject:
+    Type: "AWS::CodeBuild::Project"
+    Properties:
+      Artifacts:
+        Type: "CODEPIPELINE"
+      Environment:
+        ComputeType: !FindInMap [ Constraints, CodeBuild, COMPUTETYPE ]
+        Image: !FindInMap [ Constraints, CodeBuild, IMAGE ]
+        Type: LINUX_CONTAINER
+        EnvironmentVariables:
+          - Name: "STACK_NAME"
+            Value: !Ref RuntimeStackName
+          - Name: "SOURCECODE_REPOSITORY_NAME"
+            Value: !Ref SourceCodeRepositoryName
+          - Name: "CLUSTER_NAME"
+            Value: !Ref ClusterName
+          - Name: "JMETER_SERVER_TASK_NAME"
+            Value: !Ref JMeterServerTaskName
+          - Name: "JMETER_CLIENT_TASK_NAME"
+            Value: !Ref JMeterClientTaskName
+          - Name: "JMETER_SERVER_IMAGE"
+            Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ServerContainerImageRepository}:latest"
+          - Name: "JMETER_CLIENT_IMAGE"
+            Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ClientContainerImageRepository}:latest"
+      Name: !Sub "${ParentStackName}-run-load-test-project"
+      ServiceRole: !Ref CodeBuildServiceRoleForRunLoadTest
+      Source:
+        BuildSpec: !FindInMap [ Constraints, CodeBuild, SPEC ]
+        Type: "CODEPIPELINE"
+      TimeoutInMinutes: "30"
+
+  CodeBuildServiceRoleForRunLoadTest:
+    Type: "AWS::IAM::Role"
+    Properties:
+      Path: "/"
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "codebuild.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: !Sub "${ParentStackName}-code-build-service-role-for-run-load-test"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Resource:
+                  - !Join [ "", [ !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/', !Sub "${ParentStackName}-run-load-test-project" ] ]
+                  - !Join [ "", [ !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/', !Sub "${ParentStackName}-run-load-test-project", ":*" ] ]
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+              - Effect: "Allow"
+                Resource:
+                  - "*"
+                Action:
+                  - "s3:PutObject"
+                  - "s3:GetObject"
+                  - "s3:GetObjectVersion"
+              - Effect: "Allow"
+                Resource:
+                  - "*"
+                Action:
+                  - "ec2:*"
+              - Effect: "Allow"
+                Resource:
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*'
+                Action:
+                  - "ssm:GetParameters"
+              - Effect: "Allow"
+                Resource:
+                  - "*"
+                Action:
+                  - "iam:*"
+              - Effect: "Allow"
+                Resource:
+                  - "*"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:DeleteLogGroup"
+                  - "logs:DescribeLogGroups"
+              - Effect: "Allow"
+                Resource:
+                  - "*"
+                Action:
+                  - "ecs:DescribeClusters"
+                  - "ecs:CreateCluster"
+                  - "ecs:ListClusters"
+                  - "ecs:DeleteCluster"
+                  - "ecs:RegisterTaskDefinition"
+                  - "ecs:ListTaskDefinitions"
+                  - "ecs:DescribeTaskDefinition"
+                  - "ecs:CreateService"
+                  - "ecs:DeleteService"
+                  - "ecs:DescribeServices"
+                  - "ecs:ListTasks"
+                  - "ecs:DescribeTask"
+                  - "ecs:DescribeTasks"
+                  - "ecs:RunTask"
+                  - "ecs:StopTask"
+                  - "ecs:UpdateService"
+                  - "ecs:DeregisterTaskDefinition"
+              - Effect: "Allow"
+                Resource:
+                  - "*"
+                Action:
+                  - "cloudformation:DescribeStacks"
+              - Effect: "Allow"
+                Resource:
+                  - "*"
+                Action:
+                  - "cloudformation:CreateStack"
+                  - "cloudformation:DeleteStack"
+                  - "cloudformation:DescribeStacks"
+                  - "cloudformation:UpdateStack"
+                  - "cloudformation:CreateChangeSet"
+                  - "cloudformation:DeleteChangeSet"
+                  - "cloudformation:DescribeChangeSet"
+                  - "cloudformation:ExecuteChangeSet"
+                  - "cloudformation:SetStackPolicy"
+                  - "cloudformation:ValidateTemplate"
+                  - "iam:PassRole"
+Outputs:
+  ProjectName:
+    Value: !Ref RunLoadTestProject

@@ -1,0 +1,98 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Build Container Image Project resources of load test"
+Parameters:
+  ParentStackName:
+    Type: "String"
+  SourceCodeRepositoryName:
+    Type: "String"
+  TargetContainerImage:
+    Type: "String"
+  ContainerRepositoryName:
+    Type: "String"
+Mappings:
+  Constraints:
+    CodeBuild:
+      COMPUTETYPE: "BUILD_GENERAL1_SMALL"
+      IMAGE: "docker:dind"
+      SPEC: "spec-files/build-container-spec.yml"
+Resources:
+  BuildContainerImageProject:
+    Type: "AWS::CodeBuild::Project"
+    Properties:
+      Artifacts:
+        Type: "CODEPIPELINE"
+      Environment:
+        ComputeType: !FindInMap [ Constraints, CodeBuild, COMPUTETYPE ]
+        Image: !FindInMap [ Constraints, CodeBuild, IMAGE ]
+        PrivilegedMode: "true"
+        Type: LINUX_CONTAINER
+        EnvironmentVariables:
+          - Name: "REPOSITORY_URI"
+            Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ContainerRepositoryName}"
+          - Name: "S3_BUCKET"
+            Value: !Ref SourceCodeRepositoryName
+          - Name: "TARGET_CONTAINER_IMAGE"
+            Value: !Ref TargetContainerImage
+      Name: !Sub "${ParentStackName}-${TargetContainerImage}-build-container-image-project"
+      ServiceRole: !Ref CodeBuildServiceRoleForBuildContainerImage
+      Source:
+        BuildSpec: !FindInMap [ Constraints, CodeBuild, SPEC ]
+        Type: "CODEPIPELINE"
+      TimeoutInMinutes: "10"
+
+  CodeBuildServiceRoleForBuildContainerImage:
+    Type: "AWS::IAM::Role"
+    Properties:
+      Path: "/"
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "codebuild.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: !Sub "${ParentStackName}-${TargetContainerImage}-code-build-service-role-for-build-container-image"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Resource:
+                  - !Join [ "", [ !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/', !Sub "${ParentStackName}-${TargetContainerImage}-build-container-image-project" ] ]
+                  - !Join [ "", [ !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/', !Sub "${ParentStackName}-${TargetContainerImage}-build-container-image-project", ":*" ] ]
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+              - Effect: "Allow"
+                Resource:
+                  - "*"
+                Action:
+                  - "s3:PutObject"
+                  - "s3:GetObject"
+                  - "s3:GetObjectVersion"
+              - Effect: "Allow"
+                Resource:
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*'
+                Action:
+                  - "ssm:GetParameters"
+              - Effect: "Allow"
+                Resource:
+                  - "*"
+                Action:
+                  - "ecr:GetAuthorizationToken"
+                  - "ecr:BatchCheckLayerAvailability"
+                  - "ecr:GetDownloadUrlForLayer"
+                  - "ecr:GetRepositoryPolicy"
+                  - "ecr:DescribeRepositories"
+                  - "ecr:ListImages"
+                  - "ecr:DescribeImages"
+                  - "ecr:BatchGetImage"
+                  - "ecr:InitiateLayerUpload"
+                  - "ecr:UploadLayerPart"
+                  - "ecr:CompleteLayerUpload"
+                  - "ecr:PutImage"
+Outputs:
+  ProjectName:
+    Value: !Ref BuildContainerImageProject

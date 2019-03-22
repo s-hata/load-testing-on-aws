@@ -1,0 +1,15 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Artifact Repository resources of load test"
+Parameters:
+  ParentStackName:
+    Type: "String"
+Resources:
+  ArtifactRepository:
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: "Retain"
+    Properties:
+      AccessControl: "BucketOwnerFullControl"
+Outputs:
+  Name:
+    Description: "S3 Backet Name of Artifact Repository"
+    Value: !Ref ArtifactRepository

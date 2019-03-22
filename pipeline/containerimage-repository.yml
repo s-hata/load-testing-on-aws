@@ -1,0 +1,13 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Container Image Repository Resources for load testing"
+Parameters:
+  RootStackName:
+    Type: "String"
+Resources:
+  ContainerImageRepository:
+    Type: "AWS::ECR::Repository"
+Outputs:
+  Name:
+    Value: !Ref ContainerImageRepository
+  Arn:
+    Value: !GetAtt ContainerImageRepository.Arn

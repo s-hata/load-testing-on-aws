@@ -1,0 +1,155 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Load Testing Pipeline Resources"
+Parameters:
+  CFnTemplateBucketName:
+    Type: "String"
+  CFnTemplateBucketRegion:
+    Type: "String"
+Mappings:
+  CFn:
+    Path:
+      SourceCodeRepository: "cti-pl-web-for-stg/infra/load-test/sourcecode-repository.yml"
+      ArtifactRepository: "cti-pl-web-for-stg/infra/load-test/artifact-repository.yml"
+      ContainerImageRepository: "cti-pl-web-for-stg/infra/load-test/containerimage-repository.yml"
+      BuildContainerImageProject: "cti-pl-web-for-stg/infra/load-test/build-container-image-project.yml"
+      RunLoadTestProject: "cti-pl-web-for-stg/infra/load-test/run-load-test-project.yml"
+      Pipeline: "cti-pl-web-for-stg/infra/load-test/pipeline.yml"
+Conditions:
+  IsUsEast1: !Equals [ !Ref CFnTemplateBucketRegion, "us-east-1" ]
+Resources:
+  SourceCodeRepository:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      TemplateURL:
+        Fn::Sub:
+          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${TemplatePath}"
+          - {
+              Region: !If [ IsUsEast1, "", !Sub "-${CFnTemplateBucketRegion}" ],
+              TemplatePath: !FindInMap [ CFn, Path, SourceCodeRepository ]
+            }
+      TimeoutInMinutes: "5"
+      Parameters:
+        ParentStackName: !Ref AWS::StackName
+  ArtifactRepository:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      TemplateURL:
+        Fn::Sub:
+          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${TemplatePath}"
+          - {
+              Region: !If [ IsUsEast1, "", !Sub "-${CFnTemplateBucketRegion}" ],
+              TemplatePath: !FindInMap [ CFn, Path, ArtifactRepository ]
+            }
+      TimeoutInMinutes: "5"
+      Parameters:
+        ParentStackName: !Ref AWS::StackName
+  ServerContainerImageRepository:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      TemplateURL:
+        Fn::Sub:
+          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${TemplatePath}"
+          - {
+              Region: !If [ IsUsEast1, "", !Sub "-${CFnTemplateBucketRegion}" ],
+              TemplatePath: !FindInMap [ CFn, Path, ContainerImageRepository ]
+            }
+      TimeoutInMinutes: "5"
+      Parameters:
+        ParentStackName: !Ref AWS::StackName
+        IamUserArn: !Ref IamUserArn
+        TargetContainerImage: "server"
+  ClientContainerImageRepository:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      TemplateURL:
+        Fn::Sub:
+          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${TemplatePath}"
+          - {
+              Region: !If [ IsUsEast1, "", !Sub "-${CFnTemplateBucketRegion}" ],
+              TemplatePath: !FindInMap [ CFn, Path, ContainerImageRepository ]
+            }
+      TimeoutInMinutes: "5"
+      Parameters:
+        ParentStackName: !Ref AWS::StackName
+        IamUserArn: !Ref IamUserArn
+        TargetContainerImage: "client"
+  BuildServerContainerImage:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      TemplateURL:
+        Fn::Sub:
+          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${TemplatePath}"
+          - {
+              Region: !If [ IsUsEast1, "", !Sub "-${CFnTemplateBucketRegion}" ],
+              TemplatePath: !FindInMap [ CFn, Path, BuildContainerImageProject ]
+            }
+      TimeoutInMinutes: "5"
+      Parameters:
+        ParentStackName: !Ref AWS::StackName
+        SourceCodeRepositoryName: !GetAtt [ SourceCodeRepository, Outputs.Name ]
+        TargetContainerImage: "server"
+        ContainerRepositoryName: !GetAtt [ ServerContainerImageRepository, Outputs.Name ]
+  BuildClientContainerImage:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      TemplateURL:
+        Fn::Sub:
+          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${TemplatePath}"
+          - {
+              Region: !If [ IsUsEast1, "", !Sub "-${CFnTemplateBucketRegion}" ],
+              TemplatePath: !FindInMap [ CFn, Path, BuildContainerImageProject ]
+            }
+      TimeoutInMinutes: "5"
+      Parameters:
+        ParentStackName: !Ref AWS::StackName
+        SourceCodeRepositoryName: !GetAtt [ SourceCodeRepository, Outputs.Name ]
+        TargetContainerImage: "client"
+        ContainerRepositoryName: !GetAtt [ ClientContainerImageRepository, Outputs.Name ]
+
+  RunLoadTestProject:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      TemplateURL:
+        Fn::Sub:
+          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${TemplatePath}"
+          - {
+              Region: !If [ IsUsEast1, "", !Sub "-${CFnTemplateBucketRegion}" ],
+              TemplatePath: !FindInMap [ CFn, Path, RunLoadTestProject ]
+            }
+      TimeoutInMinutes: "5"
+      Parameters:
+        ParentStackName: !Ref AWS::StackName
+        SourceCodeRepositoryName: !GetAtt [ SourceCodeRepository, Outputs.Name ]
+        ClusterName: !Sub "${AWS::StackName}-load-test-cluster"
+        JMeterServerTaskName: !Sub "${AWS::StackName}-jmeter-server-task"
+        JMeterClientTaskName: !Sub "${AWS::StackName}-jmeter-client-task"
+        ServerContainerImageRepository: !GetAtt ServerContainerImageRepository.Outputs.Name
+        ClientContainerImageRepository: !GetAtt ClientContainerImageRepository.Outputs.Name
+        RuntimeStackName: !Sub "${AWS::StackName}-load-test-runtime"
+  Pipeline:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      TemplateURL:
+        Fn::Sub:
+          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${TemplatePath}"
+          - {
+              Region: !If [ IsUsEast1, "", !Sub "-${CFnTemplateBucketRegion}" ],
+              TemplatePath: !FindInMap [ CFn, Path, Pipeline ]
+            }
+      TimeoutInMinutes: "5"
+      Parameters:
+        ParentStackName: !Ref AWS::StackName
+        SourceCodeRepositoryName: !GetAtt SourceCodeRepository.Outputs.Name
+        ArtifactRepositoryName: !GetAtt ArtifactRepository.Outputs.Name
+        RunLoadTestProjectName: !GetAtt RunLoadTestProject.Outputs.ProjectName
+        ClusterName: !Sub "${AWS::StackName}-load-test-cluster"
+        ServerContainerImageRepository: !GetAtt ServerContainerImageRepository.Outputs.Name
+        ClientContainerImageRepository: !GetAtt ServerContainerImageRepository.Outputs.Name
+        BuildServerContainerProjectName: !GetAtt BuildServerContainerImage.Outputs.ProjectName
+        BuildClientContainerProjectName: !GetAtt BuildClientContainerImage.Outputs.ProjectName
+        JMeterServerTaskName: !Sub "${AWS::StackName}-jmeter-server-task"
+        JMeterClientTaskName: !Sub "${AWS::StackName}-jmeter-client-task"
+        RuntimeStackName: !Sub "${AWS::StackName}-load-test-runtime"
+Outputs:
+  SourceCodeRepositoryName:
+    Value: !GetAtt SourceCodeRepository.Outputs.Name
