@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "Run Load Test Project resources of load test"
 Parameters:
-  ParentStackName:
+  RootStackName:
     Type: "String"
   SourceCodeRepositoryName:
     Type: "String"
@@ -22,7 +22,7 @@ Mappings:
     CodeBuild:
       COMPUTETYPE: "BUILD_GENERAL1_SMALL"
       IMAGE: "docker:dind"
-      SPEC: "spec-files/run-load-test-spec.yml"
+      SPEC: "spec-files/run-load-testing-spec.yml"
 Resources:
   RunLoadTestProject:
     Type: "AWS::CodeBuild::Project"
@@ -48,7 +48,7 @@ Resources:
             Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ServerContainerImageRepository}:latest"
           - Name: "JMETER_CLIENT_IMAGE"
             Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ClientContainerImageRepository}:latest"
-      Name: !Sub "${ParentStackName}-run-load-test-project"
+      Name: !Sub "${RootStackName}-run-load-test-project"
       ServiceRole: !Ref CodeBuildServiceRoleForRunLoadTest
       Source:
         BuildSpec: !FindInMap [ Constraints, CodeBuild, SPEC ]
@@ -68,14 +68,14 @@ Resources:
             Action:
               - "sts:AssumeRole"
       Policies:
-        - PolicyName: !Sub "${ParentStackName}-code-build-service-role-for-run-load-test"
+        - PolicyName: !Sub "${RootStackName}-code-build-service-role-for-run-load-test"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
               - Effect: "Allow"
                 Resource:
-                  - !Join [ "", [ !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/', !Sub "${ParentStackName}-run-load-test-project" ] ]
-                  - !Join [ "", [ !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/', !Sub "${ParentStackName}-run-load-test-project", ":*" ] ]
+                  - !Join [ "", [ !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/', !Sub "${RootStackName}-run-load-test-project" ] ]
+                  - !Join [ "", [ !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/', !Sub "${RootStackName}-run-load-test-project", ":*" ] ]
                 Action:
                   - "logs:CreateLogGroup"
                   - "logs:CreateLogStream"

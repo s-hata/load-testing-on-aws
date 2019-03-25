@@ -6,86 +6,91 @@ Parameters:
   CFnTemplateBucketRegion:
     Type: "String"
 Mappings:
+  Constraints:
+    Project:
+      Name: "load-testing-on-aws"
   CFn:
     Path:
-      SourceCodeRepository: "cti-pl-web-for-stg/infra/load-test/sourcecode-repository.yml"
-      ArtifactRepository: "cti-pl-web-for-stg/infra/load-test/artifact-repository.yml"
-      ContainerImageRepository: "cti-pl-web-for-stg/infra/load-test/containerimage-repository.yml"
-      BuildContainerImageProject: "cti-pl-web-for-stg/infra/load-test/build-container-image-project.yml"
-      RunLoadTestProject: "cti-pl-web-for-stg/infra/load-test/run-load-test-project.yml"
-      Pipeline: "cti-pl-web-for-stg/infra/load-test/pipeline.yml"
+      SourceCodeRepository: "pipeline/sourcecode-repository.yml"
+      ArtifactRepository: "pipeline/artifact-repository.yml"
+      ContainerImageRepository: "pipeline/containerimage-repository.yml"
+      BuildContainerImageProject: "pipeline/build-containerimage-project.yml"
+      RunLoadTestProject: "pipeline/run-load-testing-project.yml"
+      Pipeline: "pipeline/pipeline.yml"
 Conditions:
   IsUsEast1: !Equals [ !Ref CFnTemplateBucketRegion, "us-east-1" ]
+  IsUsEast2: !Equals [ !Ref CFnTemplateBucketRegion, "us-east-2" ]
 Resources:
   SourceCodeRepository:
     Type: "AWS::CloudFormation::Stack"
     Properties:
       TemplateURL:
         Fn::Sub:
-          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${TemplatePath}"
+          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${ProjectName}/${Path}"
           - {
-              Region: !If [ IsUsEast1, "", !Sub "-${CFnTemplateBucketRegion}" ],
-              TemplatePath: !FindInMap [ CFn, Path, SourceCodeRepository ]
+              Region: !If [ IsUsEast1, "", !If [ IsUsEast2, !Sub ".${CFnTemplateBucketRegion}", !Sub "-${CFnTemplateBucketRegion}" ] ],
+              ProjectName: !FindInMap [ Constraints, Project, Name ],
+              Path: !FindInMap [ CFn, Path, SourceCodeRepository ]
             }
       TimeoutInMinutes: "5"
       Parameters:
-        ParentStackName: !Ref AWS::StackName
+        RootStackName: !Ref AWS::StackName
   ArtifactRepository:
     Type: "AWS::CloudFormation::Stack"
     Properties:
       TemplateURL:
         Fn::Sub:
-          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${TemplatePath}"
+          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${ProjectName}/${Path}"
           - {
-              Region: !If [ IsUsEast1, "", !Sub "-${CFnTemplateBucketRegion}" ],
-              TemplatePath: !FindInMap [ CFn, Path, ArtifactRepository ]
+              Region: !If [ IsUsEast1, "", !If [ IsUsEast2, !Sub ".${CFnTemplateBucketRegion}", !Sub "-${CFnTemplateBucketRegion}" ] ],
+              ProjectName: !FindInMap [ Constraints, Project, Name ],
+              Path: !FindInMap [ CFn, Path, ArtifactRepository ]
             }
       TimeoutInMinutes: "5"
       Parameters:
-        ParentStackName: !Ref AWS::StackName
+        RootStackName: !Ref AWS::StackName
   ServerContainerImageRepository:
     Type: "AWS::CloudFormation::Stack"
     Properties:
       TemplateURL:
         Fn::Sub:
-          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${TemplatePath}"
+          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${ProjectName}/${Path}"
           - {
-              Region: !If [ IsUsEast1, "", !Sub "-${CFnTemplateBucketRegion}" ],
-              TemplatePath: !FindInMap [ CFn, Path, ContainerImageRepository ]
+              Region: !If [ IsUsEast1, "", !If [ IsUsEast2, !Sub ".${CFnTemplateBucketRegion}", !Sub "-${CFnTemplateBucketRegion}" ] ],
+              ProjectName: !FindInMap [ Constraints, Project, Name ],
+              Path: !FindInMap [ CFn, Path, ContainerImageRepository ]
             }
       TimeoutInMinutes: "5"
       Parameters:
-        ParentStackName: !Ref AWS::StackName
-        IamUserArn: !Ref IamUserArn
-        TargetContainerImage: "server"
+        RootStackName: !Ref AWS::StackName
   ClientContainerImageRepository:
     Type: "AWS::CloudFormation::Stack"
     Properties:
       TemplateURL:
         Fn::Sub:
-          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${TemplatePath}"
+          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${ProjectName}/${Path}"
           - {
-              Region: !If [ IsUsEast1, "", !Sub "-${CFnTemplateBucketRegion}" ],
-              TemplatePath: !FindInMap [ CFn, Path, ContainerImageRepository ]
+              Region: !If [ IsUsEast1, "", !If [ IsUsEast2, !Sub ".${CFnTemplateBucketRegion}", !Sub "-${CFnTemplateBucketRegion}" ] ],
+              ProjectName: !FindInMap [ Constraints, Project, Name ],
+              Path: !FindInMap [ CFn, Path, ContainerImageRepository ]
             }
       TimeoutInMinutes: "5"
       Parameters:
-        ParentStackName: !Ref AWS::StackName
-        IamUserArn: !Ref IamUserArn
-        TargetContainerImage: "client"
+        RootStackName: !Ref AWS::StackName
   BuildServerContainerImage:
     Type: "AWS::CloudFormation::Stack"
     Properties:
       TemplateURL:
         Fn::Sub:
-          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${TemplatePath}"
+          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${ProjectName}/${Path}"
           - {
-              Region: !If [ IsUsEast1, "", !Sub "-${CFnTemplateBucketRegion}" ],
-              TemplatePath: !FindInMap [ CFn, Path, BuildContainerImageProject ]
+              Region: !If [ IsUsEast1, "", !If [ IsUsEast2, !Sub ".${CFnTemplateBucketRegion}", !Sub "-${CFnTemplateBucketRegion}" ] ],
+              ProjectName: !FindInMap [ Constraints, Project, Name ],
+              Path: !FindInMap [ CFn, Path, BuildContainerImageProject ]
             }
       TimeoutInMinutes: "5"
       Parameters:
-        ParentStackName: !Ref AWS::StackName
+        RootStackName: !Ref AWS::StackName
         SourceCodeRepositoryName: !GetAtt [ SourceCodeRepository, Outputs.Name ]
         TargetContainerImage: "server"
         ContainerRepositoryName: !GetAtt [ ServerContainerImageRepository, Outputs.Name ]
@@ -94,14 +99,15 @@ Resources:
     Properties:
       TemplateURL:
         Fn::Sub:
-          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${TemplatePath}"
+          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${ProjectName}/${Path}"
           - {
-              Region: !If [ IsUsEast1, "", !Sub "-${CFnTemplateBucketRegion}" ],
-              TemplatePath: !FindInMap [ CFn, Path, BuildContainerImageProject ]
+              Region: !If [ IsUsEast1, "", !If [ IsUsEast2, !Sub ".${CFnTemplateBucketRegion}", !Sub "-${CFnTemplateBucketRegion}" ]],
+              ProjectName: !FindInMap [ Constraints, Project, Name ],
+              Path: !FindInMap [ CFn, Path, BuildContainerImageProject ]
             }
       TimeoutInMinutes: "5"
       Parameters:
-        ParentStackName: !Ref AWS::StackName
+        RootStackName: !Ref AWS::StackName
         SourceCodeRepositoryName: !GetAtt [ SourceCodeRepository, Outputs.Name ]
         TargetContainerImage: "client"
         ContainerRepositoryName: !GetAtt [ ClientContainerImageRepository, Outputs.Name ]
@@ -111,14 +117,15 @@ Resources:
     Properties:
       TemplateURL:
         Fn::Sub:
-          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${TemplatePath}"
+          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${ProjectName}/${Path}"
           - {
-              Region: !If [ IsUsEast1, "", !Sub "-${CFnTemplateBucketRegion}" ],
-              TemplatePath: !FindInMap [ CFn, Path, RunLoadTestProject ]
+              Region: !If [ IsUsEast1, "", !If [ IsUsEast2, !Sub ".${CFnTemplateBucketRegion}", !Sub "-${CFnTemplateBucketRegion}" ] ],
+              ProjectName: !FindInMap [ Constraints, Project, Name ],
+              Path: !FindInMap [ CFn, Path, RunLoadTestProject ]
             }
       TimeoutInMinutes: "5"
       Parameters:
-        ParentStackName: !Ref AWS::StackName
+        RootStackName: !Ref AWS::StackName
         SourceCodeRepositoryName: !GetAtt [ SourceCodeRepository, Outputs.Name ]
         ClusterName: !Sub "${AWS::StackName}-load-test-cluster"
         JMeterServerTaskName: !Sub "${AWS::StackName}-jmeter-server-task"
@@ -131,14 +138,15 @@ Resources:
     Properties:
       TemplateURL:
         Fn::Sub:
-          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${TemplatePath}"
+          - "https://s3${Region}.amazonaws.com/${CFnTemplateBucketName}/${ProjectName}/${Path}"
           - {
-              Region: !If [ IsUsEast1, "", !Sub "-${CFnTemplateBucketRegion}" ],
-              TemplatePath: !FindInMap [ CFn, Path, Pipeline ]
+              Region: !If [ IsUsEast1, "", !If [ IsUsEast2, !Sub ".${CFnTemplateBucketRegion}", !Sub "-${CFnTemplateBucketRegion}" ] ],
+              ProjectName: !FindInMap [ Constraints, Project, Name ],
+              Path: !FindInMap [ CFn, Path, Pipeline ]
             }
       TimeoutInMinutes: "5"
       Parameters:
-        ParentStackName: !Ref AWS::StackName
+        RootStackName: !Ref AWS::StackName
         SourceCodeRepositoryName: !GetAtt SourceCodeRepository.Outputs.Name
         ArtifactRepositoryName: !GetAtt ArtifactRepository.Outputs.Name
         RunLoadTestProjectName: !GetAtt RunLoadTestProject.Outputs.ProjectName

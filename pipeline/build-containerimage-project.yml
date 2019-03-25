@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "Build Container Image Project resources of load test"
 Parameters:
-  ParentStackName:
+  RootStackName:
     Type: "String"
   SourceCodeRepositoryName:
     Type: "String"
@@ -14,7 +14,7 @@ Mappings:
     CodeBuild:
       COMPUTETYPE: "BUILD_GENERAL1_SMALL"
       IMAGE: "docker:dind"
-      SPEC: "spec-files/build-container-spec.yml"
+      SPEC: "spec-files/build-containerimage-spec.yml"
 Resources:
   BuildContainerImageProject:
     Type: "AWS::CodeBuild::Project"
@@ -33,7 +33,7 @@ Resources:
             Value: !Ref SourceCodeRepositoryName
           - Name: "TARGET_CONTAINER_IMAGE"
             Value: !Ref TargetContainerImage
-      Name: !Sub "${ParentStackName}-${TargetContainerImage}-build-container-image-project"
+      Name: !Sub "${RootStackName}-${TargetContainerImage}-build-container-image-project"
       ServiceRole: !Ref CodeBuildServiceRoleForBuildContainerImage
       Source:
         BuildSpec: !FindInMap [ Constraints, CodeBuild, SPEC ]
@@ -53,14 +53,14 @@ Resources:
             Action:
               - "sts:AssumeRole"
       Policies:
-        - PolicyName: !Sub "${ParentStackName}-${TargetContainerImage}-code-build-service-role-for-build-container-image"
+        - PolicyName: !Sub "${RootStackName}-${TargetContainerImage}-code-build-service-role-for-build-container-image"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
               - Effect: "Allow"
                 Resource:
-                  - !Join [ "", [ !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/', !Sub "${ParentStackName}-${TargetContainerImage}-build-container-image-project" ] ]
-                  - !Join [ "", [ !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/', !Sub "${ParentStackName}-${TargetContainerImage}-build-container-image-project", ":*" ] ]
+                  - !Join [ "", [ !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/', !Sub "${RootStackName}-${TargetContainerImage}-build-container-image-project" ] ]
+                  - !Join [ "", [ !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/', !Sub "${RootStackName}-${TargetContainerImage}-build-container-image-project", ":*" ] ]
                 Action:
                   - "logs:CreateLogGroup"
                   - "logs:CreateLogStream"

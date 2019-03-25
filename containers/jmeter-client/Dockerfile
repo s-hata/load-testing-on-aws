@@ -55,8 +55,6 @@ WORKDIR /loadtesting
 COPY ./entrypoint.sh .
 RUN chmod +x ./entrypoint.sh
 
-WORKDIR /work
-
 EXPOSE 1099 50000 51000 4445/udp
 
 ENTRYPOINT ["/loadtesting/entrypoint.sh"]

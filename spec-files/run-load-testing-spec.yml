@@ -1,0 +1,69 @@
+---
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - |
+        apk add --update --no-cache \
+        ca-certificates \
+        openssh-client \
+        openssl \
+        python \
+        py-pip \
+        curl \
+        sed \
+        jq \
+        wget
+      - pip install awscli
+  pre_build:
+    commands:
+      - aws --version
+      - |
+        VPC_ID=$(cat runtime-info.json | jq -r .VpcId)
+        VPC_CIDR_BLOCK=$(cat runtime-info.json | jq -r .VpcCidrBlock)
+        LOAD_TEST_SUBNETA_CIDR_BLOCK=$(cat runtime-info.json | jq -r .LoadTestSubnetACidrBlock)
+        LOAD_TEST_SUBNETB_CIDR_BLOCK=$(cat runtime-info.json | jq -r .LoadTestSubnetBCidrBlock)
+        ROUTE_TABLE_A=$(cat runtime-info.json | jq -r .RouteTableA)
+        ROUTE_TABLE_B=$(cat runtime-info.json | jq -r .RouteTableB)
+      - |
+        StackParameters="ParameterKey=VpcId,ParameterValue=${VPC_ID}"
+        StackParameters="${StackParameters} ParameterKey=VpcCidrBlock,ParameterValue=${VPC_CIDR_BLOCK}"
+        StackParameters="${StackParameters} ParameterKey=LoadTestSubnetACidrBlock,ParameterValue=${LOAD_TEST_SUBNETA_CIDR_BLOCK}"
+        StackParameters="${StackParameters} ParameterKey=LoadTestSubnetBCidrBlock,ParameterValue=${LOAD_TEST_SUBNETB_CIDR_BLOCK}"
+        StackParameters="${StackParameters} ParameterKey=RouteTableA,ParameterValue=${ROUTE_TABLE_A}"
+        StackParameters="${StackParameters} ParameterKey=RouteTableB,ParameterValue=${ROUTE_TABLE_B}"
+        StackParameters="${StackParameters} ParameterKey=SourceCodeRepositoryName,ParameterValue=${SOURCECODE_REPOSITORY_NAME}"
+        StackParameters="${StackParameters} ParameterKey=ClusterName,ParameterValue=${CLUSTER_NAME}"
+        StackParameters="${StackParameters} ParameterKey=JMeterServerTaskName,ParameterValue=${JMETER_SERVER_TASK_NAME}"
+        StackParameters="${StackParameters} ParameterKey=JMeterClientTaskName,ParameterValue=${JMETER_CLIENT_TASK_NAME}"
+        StackParameters="${StackParameters} ParameterKey=JMeterServerImage,ParameterValue=${JMETER_SERVER_IMAGE}"
+        StackParameters="${StackParameters} ParameterKey=JMeterClientImage,ParameterValue=${JMETER_CLIENT_IMAGE}"
+      - |
+        aws cloudformation describe-stacks --stack-name ${STACK_NAME} >/dev/null 2>&1
+        if [ $? == 0 ]; then
+          aws cloudformation update-stack --stack-name ${STACK_NAME} \
+          --template-body file://$(pwd)/infra/runtime.yml \
+          --parameters ${StackParameters} \
+          --capabilities CAPABILITY_NAMED_IAM
+          if [ $? == 0 ]; then
+            aws cloudformation wait stack-update-complete --stack-name ${STACK_NAME}
+          fi
+        else
+          aws cloudformation create-stack --stack-name ${STACK_NAME} --on-failure DELETE \
+          --template-body file://$(pwd)/infra/runtime.yml \
+          --parameters ${StackParameters} \
+          --capabilities CAPABILITY_NAMED_IAM
+          aws cloudformation wait stack-create-complete --stack-name ${STACK_NAME}
+        fi
+      - |
+        RUNTIME_STACK=$(aws cloudformation describe-stacks --stack-name ${STACK_NAME})
+        SECURITY_GROUP_ID=$(echo ${RUNTIME_STACK} | jq -r '.Stacks[].Outputs[] | select(.OutputKey=="SecurityGroupId") | .OutputValue')
+        LOAD_TEST_SUBNETA=$(echo ${RUNTIME_STACK} | jq -r '.Stacks[].Outputs[] | select(.OutputKey=="LoadTestSubnetA") | .OutputValue')
+        LOAD_TEST_SUBNETB=$(echo ${RUNTIME_STACK} | jq -r '.Stacks[].Outputs[] | select(.OutputKey=="LoadTestSubnetB") | .OutputValue')
+  build:
+    commands:
+      - echo Build started on `date`
+  post_build:
+    commands:
+      - echo Build completed on `date`

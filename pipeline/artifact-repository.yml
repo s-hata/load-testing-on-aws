@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "Artifact Repository resources of load test"
 Parameters:
-  ParentStackName:
+  RootStackName:
     Type: "String"
 Resources:
   ArtifactRepository:

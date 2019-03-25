@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "Pipeline resources of load test"
 Parameters:
-  ParentStackName:
+  RootStackName:
     Type: "String"
   SourceCodeRepositoryName:
     Type: "String"
@@ -36,7 +36,7 @@ Resources:
       ArtifactStore:
         Location: !Ref ArtifactRepositoryName
         Type: S3
-      Name: !Join [ "-", [ !Ref ParentStackName, "Load-Testing", "Pipeline" ] ]
+      Name: !Join [ "-", [ !Ref RootStackName, "Load-Testing", "Pipeline" ] ]
       RestartExecutionOnUpdate: 'false'
       RoleArn: !GetAtt CodePipelineServiceRole.Arn
       Stages:
