@@ -51,11 +51,19 @@ class S3sync {
     s._transform = (file, encoding, cb) => {
       currentFiles[ path.join(prefix, path.basename(file.path)) ] = true;
       console.log(path.basename(file.path));
+      this.client.putObject({
+        Bucket: bucket,
+        Key: path.join(prefix, path.basename(file.path)),
+        Body: file.contents
+      }).promise().then(result => {
+        console.log(result);
+      });
       cb();
     };
 
     s._flush = (cb) => {
       const c = this.client;
+      let toPut= [];
       let toDelete = [];
       const lister = c
         .listObjects({ Bucket: bucket, Prefix: prefix })
