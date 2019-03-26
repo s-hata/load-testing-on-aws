@@ -50,6 +50,7 @@ class S3sync {
 
     s._transform = (file, encoding, cb) => {
       currentFiles[ path.join(prefix, path.basename(file.path)) ] = true;
+      s.push(file);
       console.log(path.basename(file.path));
       this.client.putObject({
         Bucket: bucket,
@@ -92,7 +93,6 @@ class S3sync {
 
     return s;
   }
-
 }
 
 export default (options?) => {

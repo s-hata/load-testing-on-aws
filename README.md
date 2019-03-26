@@ -6,6 +6,8 @@ S3 sync
 
   - キャッシュ、更新されたものだけアップロード
   - レポート
+  - 参考
+    - https://github.com/pgherveou/gulp-awspublish
 
 Packages
 --------
