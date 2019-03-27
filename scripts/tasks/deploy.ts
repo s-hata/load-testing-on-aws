@@ -82,6 +82,7 @@ function sync() {
   const s3 = s3sync(_OPTIONS);
   return src(prj.src.files)
     .pipe(s3.sync("showcase-template-store", "load-testing-on-aws/pipeline"))
+    .pipe(s3.log())
     .on("error", (error) => {
       log.error(error);
     });

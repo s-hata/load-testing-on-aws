@@ -4,6 +4,7 @@ import * as path from "path";
 import * as xmlNodes from "xml-nodes";
 import * as xmlObjects from "xml-objects";
 import * as pumpify from "pumpify";
+import * as through from "through2";
 
 import * as AWS from "aws-sdk";
 
@@ -50,14 +51,14 @@ class S3sync {
 
     s._transform = (file, encoding, cb) => {
       currentFiles[ path.join(prefix, path.basename(file.path)) ] = true;
+      Object.assign(file, { s3: { path: path.join(prefix, path.basename(file.path)) ,state: "uploaded", etag: "dummy" } });
       s.push(file);
-      console.log(path.basename(file.path));
       this.client.putObject({
         Bucket: bucket,
         Key: path.join(prefix, path.basename(file.path)),
         Body: file.contents
       }).promise().then(result => {
-        console.log(result);
+        // console.log(result);
       });
       cb();
     };
@@ -74,7 +75,6 @@ class S3sync {
       lister.on('data', (key) => {
         let deleteFile;
         if (currentFiles[key]) return;
-        console.log("to delete: %s", key);
         deleteFile = new Vinyl({});
         deleteFile.s3 = {
           path: key,
@@ -87,11 +87,22 @@ class S3sync {
 
       lister.on('end', function() {
         if (!toDelete.length) return cb();
-        c.deleteObjects(buildDeleteMultiple(bucket, toDelete), cb );
+        c.deleteObjects(buildDeleteMultiple(bucket, toDelete), cb);
       });
     };
 
     return s;
+  }
+
+  log() {
+    const transform = (file, encoding, callback) => {
+      if (file instanceof Vinyl) {
+        console.log("Path: %s [%s]", file.s3.path, file.s3.state);
+      }
+      callback();
+    };
+
+    return through.obj(transform);
   }
 }
 
