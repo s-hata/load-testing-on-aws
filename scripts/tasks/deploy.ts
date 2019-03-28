@@ -64,7 +64,7 @@ function deploy(callback) {
     return client.waitFor("stackUpdateComplete", { StackName: stackName }).promise()
   }).then(result => console.log(result))
   .catch((error) => {
-    if (error.statusCode === 400) {
+    if (error && [400].indexOf(error.statusCode)) {
       client.createStack(Object.assign(_STACK_OPTION, { OnFailure: "DELETE" }))
       .promise().then(result => {
         return client.waitFor("stackCreateComplete", { StackName: stackName }).promise()
