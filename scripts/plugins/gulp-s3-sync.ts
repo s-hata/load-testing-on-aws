@@ -56,22 +56,23 @@ class S3sync {
 
     s._transform = (file, encoding, cb) => {
       currentFiles[ path.join(prefix, path.basename(file.path)) ] = true;
-      Object.assign(file, { s3: { path: path.join(prefix, path.basename(file.path)) ,state: "uploaded", etag: Utils.genETag(file.contents) } });
-      s.push(file);
+      Object.assign(file, { s3: { path: path.join(prefix, path.basename(file.path)) ,state: "", etag: Utils.genETag(file.contents) } });
       this.client.headObject({ Bucket: bucketName, Key: file.s3.path }).promise()
       .then(result => {
-        console.log("s3: %s | local: %s", result.ETag, file.s3.etag);
-        if (result.ETag.replace(/[\"]/g,"") != file.s3.etag) {
+        // console.log("s3: %s | local: %s", result.ETag, file.s3.etag);
+        if (result.ETag.replace(/[\"]/g,"") !== file.s3.etag) {
           this.client.putObject({
             Bucket: bucketName,
             Key: path.join(prefix, path.basename(file.path)),
             Body: file.contents
           }).promise().then(result => {
-            console.log("Uploaded: %s", result.ETag);
+            file.s3.state = "updated";
+            s.push(file);
             cb();
           });
         } else {
-          console.log("No Changed: %s", result.ETag);
+          file.s3.state = "no changed";
+          s.push(file);
           cb();
         }
       }).catch(error => {

@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "Pipeline Resources of load test"
+Description: "Pipeline resources of load test"
 Parameters:
   RootStackName:
     Type: "String"
