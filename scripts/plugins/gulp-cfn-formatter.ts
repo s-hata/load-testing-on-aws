@@ -6,6 +6,7 @@ import * as PluginError from "plugin-error";
 import * as yaml from "js-yaml";
 import chalk from "chalk";
 
+const PLUGIN_NAME = "gulp-cfn-formatter";
 
 const CFN_FUNCTIONS = {
   "Fn::Base64": {},
@@ -181,7 +182,7 @@ export default (options?) => {
     }
 
     if (file.isStream()) {
-      callback(new PluginError("gulp-cfn-formmater", "streams not supported!"));
+      callback(new PluginError(PLUGIN_NAME, "streams not supported!"));
     }
 
     if (file.isBuffer()) {
