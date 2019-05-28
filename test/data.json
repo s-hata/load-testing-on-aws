@@ -1,0 +1,24 @@
+{
+  "todos": [
+    {
+      "id": 1,
+      "title": "タスク 1",
+      "complete": false
+    },
+    {
+      "id": 2,
+      "title": "タスク 2",
+      "complete": false
+    },
+    {
+      "id": 3,
+      "title": "タスク 3",
+      "complete": false
+    },
+    {
+      "id": 4,
+      "title": "タスク 4",
+      "complete": true
+    }
+  ]
+}
