@@ -2,20 +2,22 @@ version: '2'
 
 services:
   client:
-    build: .
+    build: ./jmeter-client
     image: jmeter/client:latest
-    volumes:
-      - ../plans:/plans
-      - ./logs:/logs
-    command: "/plans/demo.jmx"
     links: 
       - server
     environment: 
-      - SERVER_HOSTS=127.0.0.1
-      - JMETER_FLAGS=-X
+      - SERVER_HOSTS=server
+    volumes:
+      - ./work:/work
     ports:
       - "50000:50000/tcp"
+      - "4445:4445/tcp"
   server:
+    build: ./jmeter-server
     image: jmeter/server:latest
+    volumes:
+      - ./work:/work
     ports:
       - "50001:50001/tcp"
+      - "1099:1099/tcp"

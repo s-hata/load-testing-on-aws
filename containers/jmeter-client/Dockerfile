@@ -13,6 +13,7 @@ ENV JMETER_HOME /opt/$JMETER
 ENV PATH $PATH:$JMETER_HOME/bin
 ENV JMETER_MEMORY -Xms800m -Xmx800m
 ENV JMETER_FLAGS=
+ENV RESULTS_LOG /work/results.jtl
 
 # Set Timezone
 RUN apk add --update --no-cache tzdata
@@ -49,12 +50,10 @@ RUN PluginsManagerCMD.sh install-all-except jpgc-hadoop,jpgc-oauth \
   && sleep 2 \
   && PluginsManagerCMD.sh status
 
-WORKDIR /loadtesting
-
 # Copy the shell script for entrypoint
-COPY ./entrypoint.sh .
-RUN chmod +x ./entrypoint.sh
+ADD ./entrypoint.sh /opt
+RUN chmod +x /opt/entrypoint.sh
 
 EXPOSE 1099 50000 51000 4445/udp
 
-ENTRYPOINT ["/loadtesting/entrypoint.sh"]
+ENTRYPOINT ["/opt/entrypoint.sh"]

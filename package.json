@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "author": "ITOCHU Techno-Solutions Corporation",
   "scripts": {
-    "api": "json-server ./test/data.json"
+    "api": "json-server --host 0.0.0.0 ./test/data.json"
   },
   "private": true,
   "dependencies": {},

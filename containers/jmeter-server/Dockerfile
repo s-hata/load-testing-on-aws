@@ -2,42 +2,58 @@ FROM openjdk:8-alpine
 
 LABEL maintainer="Shinichi Hatano <shinichi.hatano@ctc-g.co.jp>"
 
-# constraints
-ENV JMETER apache-jmeter-5.0
+# Constraints
+ENV JMETER_VERSION 5.1.1
+ENV CMDRUNNER_VERSION 2.2
+ENV PLUGINMGR_VERSION 1.3
+
+# Variables
+ENV JMETER apache-jmeter-$JMETER_VERSION
 ENV JMETER_HOME /opt/$JMETER
 ENV PATH $PATH:$JMETER_HOME/bin
-
-# variables
-ENV RESULTS_LOG results.jtl
-ENV JMETER_FLAGS=
 ENV JMETER_MEMORY -Xms800m -Xmx800m
+ENV JMETER_FLAGS=
+ENV RESULTS_LOG /work/results.jtl
 
-# set timezone
-RUN apk add --update --no-cache \
-    tzdata
+# Set Timezone
+RUN apk add --update --no-cache tzdata
 RUN export TZ=Asia/Tokyo
 
-# Install the required tools for JMeter
+# Install packages
 RUN apk add --update --no-cache \
+    ca-certificates \
+    openssh-client \
+    openssl \
+    python \
+    py-pip \
     curl \
-    openssh-client
+    jq
 
-# install JMeter
+# Install AWS CLI
+RUN pip install awscli
+
 WORKDIR /opt
-RUN curl -O -sS https://archive.apache.org/dist/jmeter/binaries/$JMETER.tgz \
-  && tar -xvf $JMETER.tgz \
-  && rm $JMETER.tgz \
-  && rm -rf $JMETER/docs $JMETER/printable_docs
 
-# copy entrypoint
-COPY ./entrypoint.sh /opt/jmeter/
-RUN chmod +x /opt/jmeter/entrypoint.sh
+# install JMeter and the JMeter Plugins Manager
+RUN curl -O https://archive.apache.org/dist/jmeter/binaries/$JMETER.tgz \
+  && tar -xvf apache-jmeter-$JMETER_VERSION.tgz \
+  && rm apache-jmeter-$JMETER_VERSION.tgz \
+  && rm -rf $JMETER/docs $JMETER/printable_docs \
+  && cd $JMETER_HOME/lib \
+  && curl -O http://search.maven.org/remotecontent?filepath=kg/apc/cmdrunner/$CMDRUNNER_VERSION/cmdrunner-$CMDRUNNER_VERSION.jar \
+  && cd $JMETER_HOME/lib/ext \
+  && curl -O http://search.maven.org/remotecontent?filepath=kg/apc/jmeter-plugins-manager/$PLUGINMGR_VERSION/jmeter-plugins-manager-$PLUGINMGR_VERSION.jar \
+  && java -cp jmeter-plugins-manager-$PLUGINMGR_VERSION.jar org.jmeterplugins.repository.PluginManagerCMDInstaller
 
-WORKDIR /work
-RUN mkdir dataset
-COPY ./senario.properties .
-COPY ./dataset ./dataset
+# install all available plugins
+RUN PluginsManagerCMD.sh install-all-except jpgc-hadoop,jpgc-oauth \
+  && sleep 2 \
+  && PluginsManagerCMD.sh status
+
+# Copy the shell script for entrypoint
+ADD ./entrypoint.sh /opt
+RUN chmod +x /opt/entrypoint.sh
 
 EXPOSE 1099 50000 51000 4445/udp
 
-ENTRYPOINT ["/opt/jmeter/entrypoint.sh"]
+ENTRYPOINT ["/opt/entrypoint.sh"]
